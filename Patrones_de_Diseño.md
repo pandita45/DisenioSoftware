@@ -1,7 +1,7 @@
 # Patrones de Diseño a implementar
 ## Singleton MINSAL y Prototype para Campañas
 El MINSAL es la principal entidad reguladora y auditora de las campañas. Al implementar el patrón Singleton para su creación se garantiza una instancia única global, lo que es crucial para la seguridad de los datos, eliminando la posibilidad de duplicidad, inconsistencia o pérdida de registros.
-La campañas de vacucación comparten una estructura de creación idéntica (período de campaña, grupo objetivo, tipo de vacuna, etc.), por lo que implementar el patrón Prototype simplifica la creación de nuevas campañas, partiendo desde esqueleto básico preexistente.
+Las campañas de vacunación comparten una estructura de creación idéntica (período de campaña, grupo objetivo, tipo de vacuna, etc.), por lo que implementar el patrón Prototype simplifica la creación de nuevas campañas, partiendo desde un esqueleto básico preexistente.
 
 <img width="1562" height="738" alt="image" src="https://github.com/user-attachments/assets/e3a03ff6-53db-4c18-8b85-86f9b3842745" />
 
