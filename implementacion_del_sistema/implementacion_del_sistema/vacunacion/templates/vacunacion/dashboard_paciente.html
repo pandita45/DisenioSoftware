@@ -1,0 +1,91 @@
+{% extends 'vacunacion/base.html' %}
+
+{% block title %}Mi Dashboard — VacunaChile{% endblock %}
+{% block page_title %}Mi Inicio{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'agendar_cita' %}" class="btn btn-primary">➕ Agendar Cita</a>
+{% endblock %}
+
+{% block content %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ total_vacunas|default:0 }}</div>
+        <div class="stat-label">💉 Vacunas Recibidas</div>
+    </div>
+    <div class="stat-card azul">
+        <div class="stat-value">{{ citas|length }}</div>
+        <div class="stat-label">📅 Próximas Citas</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-title">📅 Mis Próximas Citas</div>
+    {% if citas %}
+    <table>
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Hora</th>
+                <th>Vacuna</th>
+                <th>Punto de Vacunación</th>
+                <th>Estado</th>
+                <th>Acción</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for cita in citas %}
+            <tr>
+                <td><strong>{{ cita.fecha }}</strong></td>
+                <td>{{ cita.hora }}</td>
+                <td>{{ cita.vacuna.nombre }}</td>
+                <td>{{ cita.punto_vacunacion.nombre }}</td>
+                <td><span class="badge badge-green">✓ Agendada</span></td>
+                <td>
+                    <a href="{% url 'cancelar_cita' cita.idCita %}" class="btn btn-danger btn-sm"
+                       onclick="return confirm('¿Cancelar esta cita?')">Cancelar</a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <div class="icon">📭</div>
+        <p>No tienes citas próximas. <a href="{% url 'agendar_cita' %}">Agendar ahora</a></p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-title">📋 Últimas Vacunaciones</div>
+    {% if vacunaciones %}
+    <table>
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Vacuna</th>
+                <th>Administrada por</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for v in vacunaciones %}
+            <tr>
+                <td>{{ v.fecha }}</td>
+                <td><span class="badge badge-green">{{ v.vacuna.nombre }}</span></td>
+                <td>{{ v.personal_salud.nombre|default:"—" }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <div style="margin-top:12px">
+        <a href="{% url 'mi_historial' %}" class="btn btn-ghost btn-sm">Ver historial completo →</a>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="icon">💉</div>
+        <p>Aún no tienes vacunaciones registradas.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

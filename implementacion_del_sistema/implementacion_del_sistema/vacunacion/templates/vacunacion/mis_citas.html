@@ -1,0 +1,46 @@
+{% extends 'vacunacion/base.html' %}
+{% block title %}Mis Citas — VacunaChile{% endblock %}
+{% block page_title %}Mis Citas{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'agendar_cita' %}" class="btn btn-primary">➕ Agendar Nueva Cita</a>
+{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-title">📅 Historial de Citas</div>
+    {% if citas %}
+    <table>
+        <thead>
+            <tr><th>Fecha</th><th>Hora</th><th>Vacuna</th><th>Punto de Vacunación</th><th>Estado</th><th>Acción</th></tr>
+        </thead>
+        <tbody>
+        {% for cita in citas %}
+        <tr>
+            <td>{{ cita.fecha }}</td>
+            <td>{{ cita.hora }}</td>
+            <td>{{ cita.vacuna.nombre }}</td>
+            <td>{{ cita.punto_vacunacion.nombre }}</td>
+            <td>
+                {% if cita.cancelada %}
+                <span class="badge badge-red">✗ Cancelada</span>
+                {% else %}
+                <span class="badge badge-green">✓ Activa</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if not cita.cancelada %}
+                <a href="{% url 'cancelar_cita' cita.idCita %}" class="btn btn-danger btn-sm"
+                   onclick="return confirm('¿Cancelar esta cita?')">Cancelar</a>
+                {% else %}—{% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <div class="icon">📭</div>
+        <p>No tienes citas registradas.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

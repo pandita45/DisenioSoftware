@@ -1,0 +1,73 @@
+{% extends 'vacunacion/base.html' %}
+{% block title %}Agendar Cita — VacunaChile{% endblock %}
+{% block page_title %}Agendar Cita{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 560px;">
+    <div class="card-title">📅 Nueva Cita de Vacunación</div>
+    <form method="post" id="formCita">
+        {% csrf_token %}
+        <div class="form-group">
+            <label>Punto de Vacunación</label>
+            {{ form.punto_vacunacion }}
+        </div>
+        <div class="form-group">
+            <label>Vacuna</label>
+            {{ form.vacuna }}
+        </div>
+
+        <div id="stock-status" style="display:none; margin-bottom:12px;"></div>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Fecha</label>
+                {{ form.fecha }}
+                {% if form.fecha.errors %}
+                <p style="color:#DE350B; font-size:13px; margin-top:5px;">⚠️ {{ form.fecha.errors.0 }}</p>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label>Hora</label>
+                {{ form.hora }}
+                {% if form.hora.errors %}
+                <p style="color:#DE350B; font-size:13px; margin-top:5px;">⚠️ {{ form.hora.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-error">⚠️ {{ form.non_field_errors.0 }}</div>
+        {% endif %}
+
+        <button type="submit" class="btn btn-primary" style="width:100%">Confirmar Cita →</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const vacunaSelect = document.querySelector('[name="vacuna"]');
+const puntoSelect = document.querySelector('[name="punto_vacunacion"]');
+const statusDiv = document.getElementById('stock-status');
+
+function checkStock() {
+    const vid = vacunaSelect.value;
+    const pid = puntoSelect.value;
+    if (!vid || !pid) return;
+
+    fetch(`/api/stock/?vacuna_id=${vid}&punto_id=${pid}`)
+        .then(r => r.json())
+        .then(data => {
+            statusDiv.style.display = 'block';
+            if (data.disponible) {
+                statusDiv.innerHTML = `<div class="alert alert-success">✓ Stock disponible: ${data.cantidad} dosis en este punto.</div>`;
+            } else {
+                statusDiv.innerHTML = `<div class="alert alert-error">✗ Sin stock disponible en este punto para la vacuna seleccionada.</div>`;
+            }
+        });
+}
+
+vacunaSelect.addEventListener('change', checkStock);
+puntoSelect.addEventListener('change', checkStock);
+</script>
+{% endblock %}

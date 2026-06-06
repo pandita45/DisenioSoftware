@@ -1,0 +1,67 @@
+{% extends 'vacunacion/base.html' %}
+
+{% block title %}Dashboard MINSAL — VacunaChile{% endblock %}
+{% block page_title %}Panel MINSAL{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'crear_campana' %}" class="btn btn-primary">📣 Nueva Campaña</a>
+<a href="{% url 'reporte_vacunaciones' %}" class="btn btn-ghost">📊 Ver Reporte</a>
+{% endblock %}
+
+{% block content %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ total_campanas }}</div>
+        <div class="stat-label">📣 Campañas Activas</div>
+    </div>
+    <div class="stat-card azul">
+        <div class="stat-value">{{ total_vacunaciones }}</div>
+        <div class="stat-label">💉 Total Vacunaciones</div>
+    </div>
+    <div class="stat-card rojo">
+        <div class="stat-value">{{ total_pacientes }}</div>
+        <div class="stat-label">👥 Pacientes Registrados</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-title">📣 Campañas Recientes</div>
+    {% if campanas %}
+    <table>
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Inicio</th>
+                <th>Término</th>
+                <th>Grupos de Riesgo</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for c in campanas %}
+            <tr>
+                <td><strong>{{ c.nombre }}</strong></td>
+                <td>{{ c.fechaInicio }}</td>
+                <td>{{ c.fechaTermino }}</td>
+                <td>
+                    {% for g in c.grupos_riesgo.all %}
+                    <span class="badge badge-blue">{{ g.nombre }}</span>
+                    {% empty %}—
+                    {% endfor %}
+                </td>
+                <td>
+                    <a href="{% url 'eliminar_campana' c.pk %}" class="btn btn-danger btn-sm"
+                       onclick="return confirm('¿Eliminar campaña {{ c.nombre }}?')">🗑️</a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <div class="icon">📣</div>
+        <p>No hay campañas registradas. <a href="{% url 'crear_campana' %}">Crear primera campaña</a></p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

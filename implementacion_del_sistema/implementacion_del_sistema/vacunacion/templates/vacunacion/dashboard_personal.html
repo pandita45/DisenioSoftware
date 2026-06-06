@@ -1,0 +1,58 @@
+{% extends 'vacunacion/base.html' %}
+
+{% block title %}Dashboard Personal — VacunaChile{% endblock %}
+{% block page_title %}Panel de Personal de Salud{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'registrar_vacunacion' %}" class="btn btn-primary">💉 Registrar Vacunación</a>
+<a href="{% url 'registrar_paciente' %}" class="btn btn-ghost">➕ Nuevo Paciente</a>
+{% endblock %}
+
+{% block content %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ vacunaciones_hoy }}</div>
+        <div class="stat-label">💉 Vacunaciones Hoy</div>
+    </div>
+    <div class="stat-card azul">
+        <div class="stat-value">{{ citas_hoy }}</div>
+        <div class="stat-label">📅 Citas de Hoy</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-title">👥 Pacientes Recientes</div>
+    {% if pacientes %}
+    <table>
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>RUT</th>
+                <th>Fecha Nacimiento</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for p in pacientes %}
+            <tr>
+                <td><strong>{{ p.nombre }}</strong></td>
+                <td>{{ p.rut }}</td>
+                <td>{{ p.fechaNacimiento }}</td>
+                <td>
+                    <a href="{% url 'historial_paciente' p.pk %}" class="btn btn-ghost btn-sm">Ver Historial</a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <div style="margin-top:12px">
+        <a href="{% url 'lista_pacientes' %}" class="btn btn-ghost btn-sm">Ver todos los pacientes →</a>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="icon">👥</div>
+        <p>No hay pacientes registrados aún.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends 'vacunacion/base.html' %}
+{% block title %}Reporte — VacunaChile{% endblock %}
+{% block page_title %}Reporte de Vacunaciones{% endblock %}
+{% block content %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ total }}</div>
+        <div class="stat-label">💉 Total Vacunaciones</div>
+    </div>
+</div>
+<div class="card">
+    <div class="card-title">📊 Detalle de Vacunaciones</div>
+    {% if vacunaciones %}
+    <table>
+        <thead>
+            <tr><th>#</th><th>Paciente</th><th>Vacuna</th><th>Fecha</th><th>Hora</th><th>Personal</th><th>Campaña</th></tr>
+        </thead>
+        <tbody>
+        {% for v in vacunaciones %}
+        <tr>
+            <td>{{ v.idVacunacion }}</td>
+            <td>{{ v.paciente.nombre }}</td>
+            <td><span class="badge badge-green">{{ v.vacuna.nombre }}</span></td>
+            <td>{{ v.fecha }}</td>
+            <td>{{ v.hora }}</td>
+            <td>{{ v.personal_salud.nombre|default:"—" }}</td>
+            <td>{{ v.campana.nombre|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <div class="icon">📊</div>
+        <p>Sin vacunaciones registradas en el sistema.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
