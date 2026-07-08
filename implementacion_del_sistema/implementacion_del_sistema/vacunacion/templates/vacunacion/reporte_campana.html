@@ -1,0 +1,33 @@
+{% extends 'vacunacion/base.html' %}
+{% block title %}Historial de campaña{% endblock %}
+{% block page_title %}Historial completo{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-title">🧾 {{ campana.nombre }}</div>
+    <p><strong>Vacuna:</strong> {{ campana.vacuna.nombre|default:"—" }}</p>
+    <p><strong>Rango:</strong> {{ campana.fechaInicio }} a {{ campana.fechaTermino }}</p>
+    {% if vacunaciones %}
+    <table>
+        <thead>
+            <tr><th>Paciente</th><th>Vacuna</th><th>Fecha</th><th>Hora</th><th>Personal</th></tr>
+        </thead>
+        <tbody>
+        {% for v in vacunaciones %}
+        <tr>
+            <td>{{ v.paciente.nombre }}</td>
+            <td>{{ v.vacuna.nombre }}</td>
+            <td>{{ v.fecha }}</td>
+            <td>{{ v.hora }}</td>
+            <td>{{ v.personal_salud.nombre|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <div class="icon">🧾</div>
+        <p>No hay vacunaciones registradas para esta campaña.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

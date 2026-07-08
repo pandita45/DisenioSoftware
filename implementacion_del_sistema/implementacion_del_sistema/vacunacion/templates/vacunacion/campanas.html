@@ -9,12 +9,13 @@
     {% if campanas %}
     <table>
         <thead>
-            <tr><th>Nombre</th><th>Inicio</th><th>Término</th><th>Grupos de Riesgo</th><th>Gestionada por</th><th>Acción</th></tr>
+            <tr><th>Nombre</th><th>Vacuna</th><th>Inicio</th><th>Término</th><th>Grupos de Riesgo</th><th>Gestionada por</th><th>Acción</th></tr>
         </thead>
         <tbody>
         {% for c in campanas %}
         <tr>
             <td><strong>{{ c.nombre }}</strong></td>
+            <td>{{ c.vacuna.nombre|default:"—" }}</td>
             <td>{{ c.fechaInicio }}</td>
             <td>{{ c.fechaTermino }}</td>
             <td>{% for g in c.grupos_riesgo.all %}<span class="badge badge-blue">{{ g.nombre }}</span> {% empty %}—{% endfor %}</td>

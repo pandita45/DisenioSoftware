@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.utils import timezone
 
 
 class Usuario(AbstractUser):
@@ -41,15 +42,33 @@ class GrupoRiesgo(models.Model):
         verbose_name_plural = "Grupos de Riesgo"
 
 
+class Vacuna(models.Model):
+    idTipo = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.nombre
+
+
 class Campana(models.Model):
     idCampana = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=150)
     fechaInicio = models.DateField()
     fechaTermino = models.DateField()
+    vacuna = models.ForeignKey(Vacuna, on_delete=models.CASCADE, related_name='campanas', null=True, blank=True)
     grupos_riesgo = models.ManyToManyField(GrupoRiesgo, blank=True, related_name='campanas')
     gestionada_por = models.ForeignKey(
         PersonalMinsal, on_delete=models.SET_NULL, null=True, related_name='campanas'
     )
+
+    def esta_activa(self, fecha=None):
+        fecha = fecha or timezone.now().date()
+        return self.fechaInicio <= fecha <= self.fechaTermino
+
+    @classmethod
+    def vacunas_activas(cls, fecha=None):
+        fecha = fecha or timezone.now().date()
+        return Vacuna.objects.filter(campanas__fechaInicio__lte=fecha, campanas__fechaTermino__gte=fecha).distinct()
 
     def registrarCampana(self):
         self.save()
@@ -97,14 +116,6 @@ class PersonalSalud(models.Model):
         verbose_name_plural = "Personal de Salud"
 
 
-class Vacuna(models.Model):
-    idTipo = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=100)
-
-    def __str__(self):
-        return self.nombre
-
-
 class PuntoVacunacion(models.Model):
     idPunto = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100)
@@ -135,13 +146,23 @@ class Stock(models.Model):
 
 
 class Cita(models.Model):
+    ESTADOS = [
+        ('agendada', 'Agendada'),
+        ('completada', 'Completada'),
+        ('cancelada', 'Cancelada'),
+        ('ausente', 'Ausente'),
+    ]
+
     idCita = models.AutoField(primary_key=True)
     paciente = models.ForeignKey(Paciente, on_delete=models.CASCADE, related_name='citas')
     punto_vacunacion = models.ForeignKey(PuntoVacunacion, on_delete=models.CASCADE, related_name='citas')
     vacuna = models.ForeignKey(Vacuna, on_delete=models.CASCADE, related_name='citas')
     fecha = models.DateField()
     hora = models.TimeField()
+    correo = models.EmailField(blank=True, null=True)
     cancelada = models.BooleanField(default=False)
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='agendada')
+    recordatorio_enviado = models.BooleanField(default=False)
 
     def agendarCita(self):
         stock = Stock.objects.filter(
@@ -149,13 +170,34 @@ class Cita(models.Model):
             punto_vacunacion=self.punto_vacunacion
         ).first()
         if stock and stock.verificarDisponibilidad():
+            self.estado = 'agendada'
+            self.cancelada = False
             self.save()
             return True
         return False
 
     def cancelarCita(self):
         self.cancelada = True
+        self.estado = 'cancelada'
         self.save()
+
+    def completarCita(self):
+        self.estado = 'completada'
+        self.cancelada = False
+        self.save()
+
+    def marcarAusente(self):
+        if self.estado != 'completada' and self.estado != 'cancelada':
+            self.estado = 'ausente'
+            self.save()
+
+    def actualizarEstadoPorFecha(self, fecha=None):
+        fecha = fecha or timezone.now().date()
+        if self.estado in {'completada', 'cancelada'}:
+            return self.estado
+        if self.fecha < fecha:
+            self.marcarAusente()
+        return self.estado
 
     def __str__(self):
         return f"Cita {self.idCita} - {self.paciente.nombre} el {self.fecha}"
