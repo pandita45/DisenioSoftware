@@ -129,13 +129,21 @@ class RegistroPacienteForm(forms.Form):
         help_text="Ingresa solo numeros y digito verificador. Ej: 143455674",
         widget=forms.TextInput(attrs={
             'placeholder': 'Ej: 143455674',
-            'maxlength': '9',
+            'maxlength': '10',
         })
     )
     nombre = forms.CharField(max_length=100, label="Nombre Completo")
-    fecha_nacimiento = forms.DateField(label="Fecha de Nacimiento", widget=forms.DateInput(attrs={'type': 'date'}))
+    correo = forms.EmailField(
+        label="Correo Electronico",
+        widget=forms.EmailInput(attrs={'placeholder': 'ejemplo@correo.com'})
+    )
+    fecha_nacimiento = forms.DateField(
+        label="Fecha de Nacimiento",
+        widget=forms.DateInput(attrs={'type': 'date'})
+    )
     username = forms.CharField(max_length=50, label="Nombre de Usuario")
     password = forms.CharField(label="Contrasena", widget=forms.PasswordInput())
+    password_confirmar = forms.CharField(label="Confirmar Contrasena", widget=forms.PasswordInput())
 
     def clean_rut(self):
         rut = self.cleaned_data.get('rut').strip().replace('.', '').replace('-', '')
@@ -144,26 +152,11 @@ class RegistroPacienteForm(forms.Form):
             raise forms.ValidationError("El RUT solo debe contener numeros y digito verificador.")
         if not (rut[-1].isdigit() or rut[-1].lower() == 'k'):
             raise forms.ValidationError("El digito verificador solo puede ser un numero o la letra K.")
-        if len(rut) < 7 or len(rut) > 9:
-            raise forms.ValidationError("El RUT debe tener entre 7 y 9 caracteres.")
+        if len(rut) < 7 or len(rut) > 10:
+            raise forms.ValidationError("El RUT debe tener entre 7 y 10 caracteres.")
 
         cuerpo = rut[:-1]
         dv_ingresado = rut[-1].upper()
-        suma = 0
-        multiplo = 2
-        for digito in reversed(cuerpo):
-            suma += int(digito) * multiplo
-            multiplo = multiplo + 1 if multiplo < 7 else 2
-        resto = 11 - (suma % 11)
-        if resto == 11:
-            dv_calculado = '0'
-        elif resto == 10:
-            dv_calculado = 'K'
-        else:
-            dv_calculado = str(resto)
-
-        if dv_ingresado != dv_calculado:
-            raise forms.ValidationError(f"El RUT {rut} no es valido. Verifica el digito verificador.")
 
         if len(cuerpo) == 7:
             rut_formateado = f"{cuerpo[0]}.{cuerpo[1:4]}.{cuerpo[4:]}-{dv_ingresado}"
@@ -173,21 +166,36 @@ class RegistroPacienteForm(forms.Form):
             rut_formateado = f"{cuerpo}-{dv_ingresado}"
 
         if Paciente.objects.filter(rut=rut_formateado).exists():
-            raise forms.ValidationError(f"Ya existe un paciente registrado con el RUT {rut_formateado}.")
+            raise forms.ValidationError(f"Ya existe un paciente con el RUT {rut_formateado}.")
 
         return rut_formateado
+
+    def clean_correo(self):
+        correo = self.cleaned_data.get('correo')
+        if Usuario.objects.filter(email=correo).exists():
+            raise forms.ValidationError("Ya existe una cuenta con ese correo electronico.")
+        return correo
 
     def clean_username(self):
         username = self.cleaned_data.get('username')
         if Usuario.objects.filter(username=username).exists():
-            raise forms.ValidationError(f"El nombre de usuario '{username}' ya esta en uso.")
+            raise forms.ValidationError(f"El usuario '{username}' ya esta en uso.")
         return username
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password = cleaned_data.get('password')
+        password_confirmar = cleaned_data.get('password_confirmar')
+        if password and password_confirmar and password != password_confirmar:
+            self.add_error('password_confirmar', "Las contrasenas no coinciden.")
+        return cleaned_data
 
     def save(self):
         data = self.cleaned_data
         user = Usuario.objects.create_user(
             username=data['username'],
             password=data['password'],
+            email=data['correo'],
             rol='paciente',
             rut=data['rut'],
         )

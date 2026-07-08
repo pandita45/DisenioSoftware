@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.http import JsonResponse
 from django.db.models import Q
+from .notificaciones import notificar_registro, notificar_cita
 from .models import (
     Usuario, Paciente, PersonalSalud, PersonalMinsal,
     Campana, Cita, Vacunacion, Vacuna, PuntoVacunacion, Stock, GrupoRiesgo
@@ -99,17 +100,15 @@ def agendar_cita(request):
         cita = form.save(commit=False)
         cita.paciente = paciente
 
-        # Verificar si ya tiene una cita activa ese dia
         cita_existente = Cita.objects.filter(
             paciente=paciente,
             fecha=cita.fecha,
             cancelada=False
         ).exists()
         if cita_existente:
-            messages.error(request, "Ya has agendado para vacunarte el dia de hoy, si desea agendar, cancela tu anterior cita.")
+            messages.error(request, "Ya has agendado para vacunarte ese dia. Si deseas agendar, cancela tu anterior cita.")
             return render(request, 'vacunacion/agendar_cita.html', {'form': form})
 
-        # Verificar stock
         stock = Stock.objects.filter(
             vacuna=cita.vacuna,
             punto_vacunacion=cita.punto_vacunacion
@@ -117,7 +116,6 @@ def agendar_cita(request):
         if not stock or not stock.verificarDisponibilidad():
             messages.error(request, "No hay stock disponible para esa vacuna en ese punto.")
         else:
-            # Verificar horario (no otra cita en mismo slot)
             conflicto = Cita.objects.filter(
                 punto_vacunacion=cita.punto_vacunacion,
                 fecha=cita.fecha,
@@ -128,7 +126,16 @@ def agendar_cita(request):
                 messages.error(request, "Ya existe una cita en ese horario y punto de vacunacion.")
             else:
                 cita.save()
-                messages.success(request, f"Cita agendada exitosamente para el {cita.fecha} a las {cita.hora}.")
+                if request.user.email:
+                    notificar_cita(
+                        nombre=paciente.nombre,
+                        correo=request.user.email,
+                        fecha=cita.fecha,
+                        hora=cita.hora,
+                        punto=cita.punto_vacunacion.nombre,
+                        vacuna=cita.vacuna.nombre
+                    )
+                messages.success(request, f"Cita agendada para el {cita.fecha} a las {cita.hora}. Se envio confirmacion a tu correo.")
                 return redirect('mis_citas')
     return render(request, 'vacunacion/agendar_cita.html', {'form': form})
 
@@ -170,8 +177,6 @@ def registrar_vacunacion(request):
         vacunacion = form.save(commit=False)
         vacunacion.personal_salud = personal
         vacunacion.save()
-
-        # Descontar stock del punto de vacunacion correcto
         punto = None
         if vacunacion.cita:
             punto = vacunacion.cita.punto_vacunacion
@@ -183,7 +188,6 @@ def registrar_vacunacion(request):
             if stock and stock.cantidad > 0:
                 stock.cantidad -= 1
                 stock.save()
-
         messages.success(request, "Vacunacion registrada exitosamente.")
         return redirect('lista_pacientes')
     return render(request, 'vacunacion/registrar_vacunacion.html', {'form': form})
@@ -209,12 +213,21 @@ def historial_paciente(request, paciente_id):
 
 @login_required
 @rol_requerido('personal_salud')
+@login_required
+@rol_requerido('personal_salud')
 def registrar_paciente(request):
     form = RegistroPacienteForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
-        form.save()
-        messages.success(request, "Paciente registrado exitosamente.")
-        return redirect('lista_pacientes')
+        try:
+            user = form.save()
+            notificar_registro(
+                nombre=form.cleaned_data['nombre'],
+                correo=form.cleaned_data['correo']
+            )
+            messages.success(request, f"Paciente registrado exitosamente. Se envio confirmacion a {form.cleaned_data['correo']}.")
+            return redirect('lista_pacientes')
+        except Exception as e:
+            messages.error(request, f"Error al registrar el paciente: {str(e)}")
     return render(request, 'vacunacion/registrar_paciente.html', {'form': form})
 
 
@@ -246,8 +259,6 @@ def crear_campana(request):
 @rol_requerido('personal_minsal')
 def eliminar_campana(request, campana_id):
     campana = get_object_or_404(Campana, pk=campana_id)
-
-    # Verificar si tiene vacunaciones asociadas
     if campana.vacunaciones.exists():
         messages.error(
             request,
@@ -256,7 +267,6 @@ def eliminar_campana(request, campana_id):
             "Eliminarla borraria el historial de esos registros."
         )
         return redirect('gestionar_campanas')
-
     campana.eliminarCampana()
     messages.success(request, f"Campana '{campana.nombre}' eliminada correctamente.")
     return redirect('gestionar_campanas')
@@ -271,14 +281,14 @@ def reporte_vacunaciones(request):
     total = vacunaciones.count()
     return render(request, 'vacunacion/reporte.html', {'vacunaciones': vacunaciones, 'total': total})
 
+
 def campanas_publicas(request):
-    from django.utils import timezone
     campanas = Campana.objects.filter(
         fechaTermino__gte=timezone.now().date()
     ).prefetch_related('grupos_riesgo').order_by('fechaInicio')
     return render(request, 'vacunacion/campanas_publicas.html', {'campanas': campanas})
 
-#Aquí está la API que usamos para el stock para ver si hay o no
+
 @login_required
 def verificar_stock_ajax(request):
     vacuna_id = request.GET.get('vacuna_id')

@@ -80,6 +80,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL = '/'
 LOGIN_REDIRECT_URL = '/dashboard/'
+# Configuracion de correo
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'dbtransportessantajuana@gmail.com'
+EMAIL_HOST_PASSWORD = 'dbux borp uqhn cigk'
+DEFAULT_FROM_EMAIL = 'VacunaChile MINSAL <dbtransportessantajuana@gmail.com>'
 
 # Seguridad (activar en producción)
 # SESSION_COOKIE_SECURE = True

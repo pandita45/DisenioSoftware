@@ -108,12 +108,14 @@ class Command(BaseCommand):
             self.stdout.write("  ✓ Personal Salud: medico1 / pass1234")
 
         # ── Pacientes ──
+
         pacientes_data = [
-            ('paciente1', 'pass1234', 'Ana', 'González', '15.234.567-8', datetime.date(1990, 3, 15), 'ana.gonzalez@mail.cl'),
-            ('paciente2', 'pass1234', 'Carlos', 'Muñoz', '16.789.012-3', datetime.date(1955, 7, 22), 'c.munoz@mail.cl'),
-            ('paciente3', 'pass1234', 'María', 'Soto', '14.321.098-7', datetime.date(1978, 11, 5), 'm.soto@mail.cl'),
-            ('paciente4', 'pass1234', 'Jorge', 'Ramírez', '17.654.321-0', datetime.date(2000, 1, 30), 'j.ramirez@mail.cl'),
-        ]
+    ('paciente1', 'pass1234', 'Ana', 'González', '15.234.567-8', datetime.date(1990, 3, 15), 'ana.gonzalez@gmail.com'),
+    ('paciente2', 'pass1234', 'Carlos', 'Muñoz', '16.789.012-3', datetime.date(1955, 7, 22), 'carlos.munoz@gmail.com'),
+    ('paciente3', 'pass1234', 'María', 'Soto', '14.321.098-7', datetime.date(1978, 11, 5), 'maria.soto@gmail.com'),
+    ('paciente4', 'pass1234', 'Jorge', 'Ramírez', '17.654.321-0', datetime.date(2000, 1, 30), 'jorge.ramirez@gmail.com'),
+]
+        
 
         paciente_objs = []
         for username, password, nombre, apellido, rut, fecha, email in pacientes_data:
