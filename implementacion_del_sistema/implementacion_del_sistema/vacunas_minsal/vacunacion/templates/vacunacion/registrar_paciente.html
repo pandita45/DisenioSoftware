@@ -1,0 +1,19 @@
+{% extends 'vacunacion/base.html' %}
+{% block title %}Registrar Paciente{% endblock %}
+{% block page_title %}Registrar Nuevo Paciente{% endblock %}
+{% block content %}
+<div class="card" style="max-width:560px;">
+    <div class="card-title">👤 Datos del Paciente</div>
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="form-group">
+            <label>{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<p style="color:#DE350B; font-size:12px; margin-top:4px;">{{ field.errors.0 }}</p>{% endif %}
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary" style="width:100%">Registrar Paciente →</button>
+    </form>
+</div>
+{% endblock %}

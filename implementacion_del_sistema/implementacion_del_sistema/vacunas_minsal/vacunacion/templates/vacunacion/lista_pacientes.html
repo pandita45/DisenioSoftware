@@ -1,0 +1,41 @@
+{% extends 'vacunacion/base.html' %}
+{% block title %}Pacientes — VacunaChile{% endblock %}
+{% block page_title %}Pacientes{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'registrar_paciente' %}" class="btn btn-primary">➕ Registrar Paciente</a>
+{% endblock %}
+{% block content %}
+<div class="card">
+    <form method="get" style="display:flex; gap:10px; margin-bottom:20px;">
+        <input type="text" name="q" value="{{ q }}" placeholder="Buscar por nombre o RUT..." style="flex:1; padding:9px 12px; border:1.5px solid #EBECF0; border-radius:6px; font-size:14px;">
+        <button type="submit" class="btn btn-primary">Buscar</button>
+        {% if q %}<a href="{% url 'lista_pacientes' %}" class="btn btn-ghost">Limpiar</a>{% endif %}
+    </form>
+
+    {% if pacientes %}
+    <table>
+        <thead>
+            <tr><th>Nombre</th><th>RUT</th><th>Fecha Nacimiento</th><th>Acciones</th></tr>
+        </thead>
+        <tbody>
+        {% for p in pacientes %}
+        <tr>
+            <td><strong>{{ p.nombre }}</strong></td>
+            <td>{{ p.rut }}</td>
+            <td>{{ p.fechaNacimiento }}</td>
+            <td style="display:flex; gap:6px;">
+                <a href="{% url 'historial_paciente' p.pk %}" class="btn btn-ghost btn-sm">📋 Historial</a>
+                <a href="{% url 'registrar_vacunacion' %}" class="btn btn-primary btn-sm">💉 Vacunar</a>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <div class="icon">👥</div>
+        <p>No se encontraron pacientes{% if q %} para "{{ q }}"{% endif %}.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

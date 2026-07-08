@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}VacunaChile — MINSAL{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --verde: #00875A;
+            --verde-oscuro: #005C3D;
+            --verde-claro: #E3F5EE;
+            --azul: #0052CC;
+            --rojo: #DE350B;
+            --gris-100: #F4F5F7;
+            --gris-200: #EBECF0;
+            --gris-400: #B3BAC5;
+            --gris-700: #42526E;
+            --gris-900: #172B4D;
+            --blanco: #FFFFFF;
+            --sombra: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
+            --sombra-md: 0 4px 12px rgba(0,0,0,0.10), 0 2px 4px rgba(0,0,0,0.06);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--gris-100);
+            color: var(--gris-900);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: 240px;
+            background: var(--gris-900);
+            min-height: 100vh;
+            position: fixed;
+            top: 0; left: 0;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+        }
+
+        .sidebar-logo {
+            padding: 24px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .logo-badge {
+            display: inline-block;
+            background: var(--verde);
+            color: white;
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: 11px;
+            letter-spacing: 0.12em;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        .sidebar-logo h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: white;
+            line-height: 1.2;
+        }
+
+        .sidebar-logo p {
+            font-size: 11px;
+            color: var(--gris-400);
+            margin-top: 2px;
+        }
+
+        .sidebar-nav {
+            padding: 16px 12px;
+            flex: 1;
+        }
+
+        .nav-section {
+            margin-bottom: 24px;
+        }
+
+        .nav-label {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            color: var(--gris-400);
+            text-transform: uppercase;
+            padding: 0 8px;
+            margin-bottom: 6px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            border-radius: 6px;
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 400;
+            transition: all 0.15s;
+            margin-bottom: 2px;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: rgba(255,255,255,0.08);
+            color: white;
+        }
+
+        .nav-link .icon {
+            width: 18px;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .user-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: var(--verde);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 13px;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .user-info { flex: 1; min-width: 0; }
+        .user-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: white;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .user-role {
+            font-size: 11px;
+            color: var(--gris-400);
+        }
+
+        .btn-logout {
+            background: none;
+            border: none;
+            color: var(--gris-400);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px;
+            border-radius: 4px;
+            transition: color 0.15s;
+        }
+        .btn-logout:hover { color: var(--rojo); }
+
+        /* ── Main Content ── */
+        .main {
+            margin-left: 240px;
+            flex: 1;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .topbar {
+            background: white;
+            padding: 16px 32px;
+            border-bottom: 1px solid var(--gris-200);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .page-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--gris-900);
+        }
+
+        .topbar-actions { display: flex; gap: 8px; align-items: center; }
+
+        .content {
+            padding: 32px;
+            flex: 1;
+        }
+
+        /* ── Components ── */
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: var(--sombra);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--gris-900);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: var(--sombra);
+            border-left: 4px solid var(--verde);
+        }
+
+        .stat-card.azul { border-left-color: var(--azul); }
+        .stat-card.rojo { border-left-color: var(--rojo); }
+
+        .stat-value {
+            font-family: 'Syne', sans-serif;
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--gris-900);
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--gris-700);
+            font-weight: 500;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 9px 16px;
+            border-radius: 6px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            text-decoration: none;
+            transition: all 0.15s;
+        }
+
+        .btn-primary {
+            background: var(--verde);
+            color: white;
+        }
+        .btn-primary:hover { background: var(--verde-oscuro); }
+
+        .btn-danger {
+            background: var(--rojo);
+            color: white;
+        }
+        .btn-danger:hover { opacity: 0.88; }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--gris-700);
+            border: 1px solid var(--gris-200);
+        }
+        .btn-ghost:hover { background: var(--gris-100); }
+
+        .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead th {
+            text-align: left;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--gris-700);
+            padding: 10px 12px;
+            border-bottom: 2px solid var(--gris-200);
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--gris-200);
+            transition: background 0.1s;
+        }
+
+        tbody tr:hover { background: var(--gris-100); }
+
+        tbody td {
+            padding: 12px 12px;
+            font-size: 14px;
+            color: var(--gris-900);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-green { background: var(--verde-claro); color: var(--verde-oscuro); }
+        .badge-red { background: #FFEBE6; color: var(--rojo); }
+        .badge-blue { background: #DEEBFF; color: var(--azul); }
+        .badge-gray { background: var(--gris-200); color: var(--gris-700); }
+
+        .form-group { margin-bottom: 18px; }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--gris-700);
+            margin-bottom: 6px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1.5px solid var(--gris-200);
+            border-radius: 6px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            color: var(--gris-900);
+            background: white;
+            transition: border-color 0.15s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--verde);
+            box-shadow: 0 0 0 3px rgba(0,135,90,0.12);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .alert-success { background: var(--verde-claro); color: var(--verde-oscuro); }
+        .alert-error { background: #FFEBE6; color: var(--rojo); }
+        .alert-info { background: #DEEBFF; color: var(--azul); }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px;
+            color: var(--gris-400);
+        }
+
+        .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+        .empty-state p { font-size: 14px; }
+
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; min-height: auto; position: relative; }
+            .main { margin-left: 0; }
+            .form-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+{% if user.is_authenticated %}
+<aside class="sidebar">
+    <div class="sidebar-logo">
+        <span class="logo-badge">MINSAL</span>
+        <h1>VacunaChile</h1>
+        <p>Sistema de Vacunación Nacional</p>
+    </div>
+
+    <nav class="sidebar-nav">
+        {% if user.rol == 'paciente' %}
+        <div class="nav-section">
+            <div class="nav-label">Mi Cuenta</div>
+            <a href="{% url 'dashboard' %}" class="nav-link">
+                <span class="icon">🏠</span> Inicio
+            </a>
+            <a href="{% url 'mis_citas' %}" class="nav-link">
+                <span class="icon">📅</span> Mis Citas
+            </a>
+            <a href="{% url 'agendar_cita' %}" class="nav-link">
+                <span class="icon">➕</span> Agendar Cita
+            </a>
+            <a href="{% url 'mi_historial' %}" class="nav-link">
+                <span class="icon">📋</span> Mi Historial
+            </a>
+        </div>
+        {% elif user.rol == 'personal_salud' %}
+        <div class="nav-section">
+            <div class="nav-label">Gestión</div>
+            <a href="{% url 'dashboard' %}" class="nav-link">
+                <span class="icon">🏠</span> Inicio
+            </a>
+            <a href="{% url 'lista_pacientes' %}" class="nav-link">
+                <span class="icon">👥</span> Pacientes
+            </a>
+            <a href="{% url 'registrar_paciente' %}" class="nav-link">
+                <span class="icon">➕</span> Registrar Paciente
+            </a>
+            <a href="{% url 'registrar_vacunacion' %}" class="nav-link">
+                <span class="icon">💉</span> Registrar Vacunación
+            </a>
+        </div>
+        {% elif user.rol == 'personal_minsal' %}
+        <div class="nav-section">
+            <div class="nav-label">Administración</div>
+            <a href="{% url 'dashboard' %}" class="nav-link">
+                <span class="icon">🏠</span> Inicio
+            </a>
+            <a href="{% url 'gestionar_campanas' %}" class="nav-link">
+                <span class="icon">📣</span> Campañas
+            </a>
+            <a href="{% url 'crear_campana' %}" class="nav-link">
+                <span class="icon">➕</span> Nueva Campaña
+            </a>
+            <a href="{% url 'reporte_vacunaciones' %}" class="nav-link">
+                <span class="icon">📊</span> Reportes
+            </a>
+        </div>
+        {% endif %}
+
+        {% if user.is_superuser %}
+        <div class="nav-section">
+            <div class="nav-label">Admin</div>
+            <a href="/admin/" class="nav-link">
+                <span class="icon">⚙️</span> Panel Admin
+            </a>
+        </div>
+        {% endif %}
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="user-card">
+            <div class="user-avatar">{{ user.get_full_name|first|upper }}{{ user.username|first|upper }}</div>
+            <div class="user-info">
+                <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
+                <div class="user-role">{{ user.get_rol_display }}</div>
+            </div>
+            <a href="{% url 'logout' %}" class="btn-logout" title="Cerrar sesión">⏏</a>
+        </div>
+    </div>
+</aside>
+{% endif %}
+
+<main class="main">
+    {% if user.is_authenticated %}
+    <div class="topbar">
+        <h2 class="page-title">{% block page_title %}Dashboard{% endblock %}</h2>
+        <div class="topbar-actions">{% block topbar_actions %}{% endblock %}</div>
+    </div>
+    {% endif %}
+
+    <div class="content">
+        {% for message in messages %}
+        <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-error{% else %}alert-info{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+
+        {% block content %}{% endblock %}
+    </div>
+</main>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>
