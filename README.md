@@ -10,7 +10,7 @@ Tener instalado **Python 3.10 o superior**.
 ### 1. Abrir terminal en la carpeta del proyecto
 Luego navegar a la carpeta correcta:
 ```bash
-cd implementacion_del_sistema/implementacion_del_sistema
+cd implementacion_del_sistema/implementacion_del_sistema/vacunas_minsal
 ```
 
 ### 3. Crear el entorno virtual
