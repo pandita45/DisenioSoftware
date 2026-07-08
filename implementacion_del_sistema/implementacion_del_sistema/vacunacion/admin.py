@@ -48,8 +48,8 @@ class GrupoRiesgoAdmin(admin.ModelAdmin):
 
 @admin.register(Cita)
 class CitaAdmin(admin.ModelAdmin):
-    list_display = ('idCita', 'paciente', 'vacuna', 'punto_vacunacion', 'fecha', 'hora', 'cancelada')
-    list_filter = ('cancelada', 'fecha')
+    list_display = ('idCita', 'paciente', 'vacuna', 'punto_vacunacion', 'fecha', 'hora', 'correo', 'cancelada', 'recordatorio_enviado')
+    list_filter = ('cancelada', 'recordatorio_enviado', 'fecha')
 
 
 @admin.register(Vacunacion)

@@ -20,14 +20,18 @@
             <td>{{ cita.vacuna.nombre }}</td>
             <td>{{ cita.punto_vacunacion.nombre }}</td>
             <td>
-                {% if cita.cancelada %}
+                {% if cita.estado == 'cancelada' %}
                 <span class="badge badge-red">✗ Cancelada</span>
+                {% elif cita.estado == 'completada' %}
+                <span class="badge badge-green">✓ Completada</span>
+                {% elif cita.estado == 'ausente' %}
+                <span class="badge badge-yellow">⚠ Ausente</span>
                 {% else %}
-                <span class="badge badge-green">✓ Activa</span>
+                <span class="badge badge-blue">🗓 Agendada</span>
                 {% endif %}
             </td>
             <td>
-                {% if not cita.cancelada %}
+                {% if cita.estado == 'agendada' %}
                 <a href="{% url 'cancelar_cita' cita.idCita %}" class="btn btn-danger btn-sm"
                    onclick="return confirm('¿Cancelar esta cita?')">Cancelar</a>
                 {% else %}—{% endif %}

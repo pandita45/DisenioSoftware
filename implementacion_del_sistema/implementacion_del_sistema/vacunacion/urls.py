@@ -24,6 +24,7 @@ urlpatterns = [
     path('campanas/crear/', views.crear_campana, name='crear_campana'),
     path('campanas/eliminar/<int:campana_id>/', views.eliminar_campana, name='eliminar_campana'),
     path('reporte/', views.reporte_vacunaciones, name='reporte_vacunaciones'),
+    path('reporte/campana/<int:campana_id>/', views.reporte_campana, name='reporte_campana'),
 
     # API
     path('api/stock/', views.verificar_stock_ajax, name='verificar_stock'),

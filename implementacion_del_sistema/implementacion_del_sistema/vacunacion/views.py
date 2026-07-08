@@ -1,3 +1,8 @@
+import json
+import urllib.request
+import urllib.error
+from datetime import timedelta
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
@@ -5,6 +10,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.http import JsonResponse
 from django.db.models import Q
+from django.conf import settings
 from .models import (
     Usuario, Paciente, PersonalSalud, PersonalMinsal,
     Campana, Cita, Vacunacion, Vacuna, PuntoVacunacion, Stock, GrupoRiesgo
@@ -14,6 +20,57 @@ from .forms import (
     CampanaForm, RegistroPacienteForm
 )
 from functools import wraps
+
+
+def enviar_correo_resend(asunto, mensaje_html, para):
+    api_key = getattr(settings, 'RESEND_API_KEY', '')
+    from_email = getattr(settings, 'RESEND_FROM_EMAIL', 'onboarding@resend.dev')
+    if not api_key:
+        return False
+
+    data = json.dumps({
+        'from': from_email,
+        'to': [para],
+        'subject': asunto,
+        'html': mensaje_html,
+    }).encode('utf-8')
+
+    req = urllib.request.Request(
+        'https://api.resend.com/emails',
+        data=data,
+        headers={
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json',
+        },
+        method='POST',
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=10) as response:
+            return response.status < 400
+    except (urllib.error.URLError, urllib.error.HTTPError):
+        return False
+
+
+def enviar_recordatorios_citas(fecha=None):
+    fecha = fecha or timezone.now().date()
+    citas = Cita.objects.filter(
+        estado='agendada',
+        recordatorio_enviado=False,
+        fecha__in=[fecha + timedelta(days=1), fecha]
+    )
+    enviados = 0
+    for cita in citas:
+        correo = cita.correo or (cita.paciente.usuario.email if getattr(cita.paciente, 'usuario', None) else '')
+        if not correo:
+            continue
+        asunto = 'Recordatorio de vacunación'
+        mensaje = f"<p>Hola {cita.paciente.nombre},</p><p>Te recordamos que tienes una vacunación agendada para el {cita.fecha} a las {cita.hora}.</p><p>Gracias.</p>"
+        if enviar_correo_resend(asunto, mensaje, correo):
+            cita.recordatorio_enviado = True
+            cita.save(update_fields=['recordatorio_enviado'])
+            enviados += 1
+    return enviados
 
 
 # ─── Decoradores de Rol ────────────────────────────────────────────────────────
@@ -65,7 +122,7 @@ def dashboard(request):
     if user.rol == 'paciente' or (hasattr(user, 'paciente')):
         try:
             paciente = user.paciente
-            context['citas'] = Cita.objects.filter(paciente=paciente, cancelada=False).order_by('fecha', 'hora')[:5]
+            context['citas'] = Cita.objects.filter(paciente=paciente, estado='agendada').order_by('fecha', 'hora')[:5]
             context['vacunaciones'] = Vacunacion.objects.filter(paciente=paciente).order_by('-fecha')[:5]
             context['total_vacunas'] = Vacunacion.objects.filter(paciente=paciente).count()
         except Paciente.DoesNotExist:
@@ -98,6 +155,9 @@ def agendar_cita(request):
     if request.method == 'POST' and form.is_valid():
         cita = form.save(commit=False)
         cita.paciente = paciente
+        cita.estado = 'agendada'
+        cita.cancelada = False
+        cita.correo = form.cleaned_data.get('correo') or paciente.usuario.email or ''
         # Verificar stock
         stock = Stock.objects.filter(
             vacuna=cita.vacuna,
@@ -117,6 +177,13 @@ def agendar_cita(request):
                 messages.error(request, "Ya existe una cita en ese horario y punto de vacunación.")
             else:
                 cita.save()
+                correo = cita.correo or paciente.usuario.email or ''
+                if correo:
+                    enviar_correo_resend(
+                        'Cita agendada correctamente',
+                        f"<p>Hola {paciente.nombre},</p><p>Tu cita para vacunarte contra {cita.vacuna.nombre} ha sido agendada para el {cita.fecha} a las {cita.hora} en {cita.punto_vacunacion.nombre}.</p>",
+                        correo,
+                    )
                 messages.success(request, f"Cita agendada exitosamente para el {cita.fecha} a las {cita.hora}.")
                 return redirect('mis_citas')
     return render(request, 'vacunacion/agendar_cita.html', {'form': form})
@@ -155,10 +222,21 @@ def mi_historial(request):
 def registrar_vacunacion(request):
     form = VacunacionForm(request.POST or None)
     personal = get_object_or_404(PersonalSalud, usuario=request.user)
+    if request.method == 'GET' and 'paciente' not in request.GET and 'cita' not in request.GET:
+        form.fields['cita'].queryset = Cita.objects.filter(estado='agendada')
     if request.method == 'POST' and form.is_valid():
         vacunacion = form.save(commit=False)
         vacunacion.personal_salud = personal
         vacunacion.save()
+        if vacunacion.cita:
+            vacunacion.cita.completarCita()
+            correo = vacunacion.cita.correo or vacunacion.paciente.usuario.email or ''
+            if correo:
+                enviar_correo_resend(
+                    'Vacunación registrada',
+                    f"<p>Hola {vacunacion.paciente.nombre},</p><p>Tu vacunación contra {vacunacion.vacuna.nombre} ha sido registrada correctamente.</p>",
+                    correo,
+                )
         # Reducir stock
         stock = Stock.objects.filter(
             vacuna=vacunacion.vacuna,
@@ -169,6 +247,24 @@ def registrar_vacunacion(request):
             stock.save()
         messages.success(request, "Vacunación registrada exitosamente.")
         return redirect('lista_pacientes')
+    if request.method == 'GET':
+        paciente_id = request.GET.get('paciente')
+        cita_id = request.GET.get('cita')
+        if paciente_id:
+            form.fields['paciente'].initial = paciente_id
+        if cita_id:
+            form.fields['cita'].initial = cita_id
+            cita = get_object_or_404(Cita, pk=cita_id)
+            if cita.paciente_id:
+                form.fields['paciente'].initial = cita.paciente_id
+            if cita.vacuna_id:
+                form.fields['vacuna'].initial = cita.vacuna_id
+            form.fields['cita'].queryset = Cita.objects.filter(pk=cita_id, estado='agendada')
+        else:
+            form.fields['cita'].queryset = Cita.objects.filter(estado='agendada')
+
+        if paciente_id:
+            form.fields['cita'].queryset = form.fields['cita'].queryset.filter(paciente_id=paciente_id)
     return render(request, 'vacunacion/registrar_vacunacion.html', {'form': form})
 
 
@@ -214,14 +310,20 @@ def gestionar_campanas(request):
 @rol_requerido('personal_minsal')
 def crear_campana(request):
     form = CampanaForm(request.POST or None)
-    if request.method == 'POST' and form.is_valid():
-        campana = form.save(commit=False)
-        minsal = get_object_or_404(PersonalMinsal, usuario=request.user)
-        campana.gestionada_por = minsal
-        campana.save()
-        form.save_m2m()
-        messages.success(request, f"Campaña '{campana.nombre}' creada exitosamente.")
-        return redirect('gestionar_campanas')
+    if request.method == 'POST':
+        if form.is_valid():
+            campana = form.save(commit=False)
+            if campana.fechaInicio > campana.fechaTermino:
+                messages.error(request, "La fecha de término no puede ser anterior a la fecha de inicio.")
+            else:
+                minsal = get_object_or_404(PersonalMinsal, usuario=request.user)
+                campana.gestionada_por = minsal
+                campana.save()
+                form.save_m2m()
+                messages.success(request, f"Campaña '{campana.nombre}' creada exitosamente.")
+                return redirect('gestionar_campanas')
+        else:
+            messages.error(request, "Revisa los datos del formulario y vuelve a intentarlo.")
     return render(request, 'vacunacion/crear_campana.html', {'form': form})
 
 
@@ -237,11 +339,23 @@ def eliminar_campana(request, campana_id):
 @login_required
 @rol_requerido('personal_minsal')
 def reporte_vacunaciones(request):
-    vacunaciones = Vacunacion.objects.select_related(
-        'paciente', 'vacuna', 'personal_salud', 'campana'
-    ).order_by('-fecha')
-    total = vacunaciones.count()
-    return render(request, 'vacunacion/reporte.html', {'vacunaciones': vacunaciones, 'total': total})
+    campanas = Campana.objects.select_related('vacuna').prefetch_related('vacunaciones__paciente').order_by('-fechaInicio')
+    total = Vacunacion.objects.count()
+    total_por_campana = []
+    for campana in campanas:
+        total_por_campana.append({
+            'campana': campana,
+            'cantidad': campana.vacunaciones.count(),
+        })
+    return render(request, 'vacunacion/reporte.html', {'campanas': campanas, 'total': total, 'totales_por_campana': total_por_campana})
+
+
+@login_required
+@rol_requerido('personal_minsal')
+def reporte_campana(request, campana_id):
+    campana = get_object_or_404(Campana, pk=campana_id)
+    vacunaciones = Vacunacion.objects.filter(campana=campana).select_related('paciente', 'vacuna', 'personal_salud').order_by('-fecha', '-hora')
+    return render(request, 'vacunacion/reporte_campana.html', {'campana': campana, 'vacunaciones': vacunaciones})
 
 
 # ─── API para stock (AJAX) ────────────────────────────────────────────────────
