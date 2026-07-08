@@ -7,13 +7,12 @@ urlpatterns = [
     path('', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('dashboard/', views.dashboard, name='dashboard'),
-
     # Paciente
     path('citas/agendar/', views.agendar_cita, name='agendar_cita'),
     path('citas/', views.mis_citas, name='mis_citas'),
     path('citas/cancelar/<int:cita_id>/', views.cancelar_cita, name='cancelar_cita'),
     path('historial/', views.mi_historial, name='mi_historial'),
-
+    path("instrucciones/", views.Instrucciones, name="Instrucciones"),
     # Personal Salud
     path('vacunacion/registrar/', views.registrar_vacunacion, name='registrar_vacunacion'),
     path('pacientes/', views.lista_pacientes, name='lista_pacientes'),

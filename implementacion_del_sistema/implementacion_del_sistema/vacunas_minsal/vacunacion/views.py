@@ -15,7 +15,10 @@ from .forms import (
     CampanaForm, RegistroPacienteForm
 )
 from functools import wraps
+from django.shortcuts import render
 
+def Instrucciones(request):
+    return render(request, "vacunacion/Instrucciones.html")
 
 # ─── Decoradores de Rol ───────────────────────────────────────────────────────
 

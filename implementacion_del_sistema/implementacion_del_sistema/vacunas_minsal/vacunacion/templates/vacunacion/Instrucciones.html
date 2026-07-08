@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instrucciones de Uso — VacunaChile</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+
+    <style>
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+
+        body{
+            font-family:'DM Sans',sans-serif;
+            background:#F4F5F7;
+            min-height:100vh;
+        }
+
+        .header{
+            background:#172B4D;
+            padding:20px 40px;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+        }
+
+        .header-logo{
+            font-family:'Syne',sans-serif;
+            font-size:20px;
+            font-weight:800;
+            color:white;
+        }
+
+        .btn-back{
+            display:inline-flex;
+            align-items:center;
+            gap:6px;
+            padding:8px 16px;
+            background:rgba(255,255,255,.1);
+            color:white;
+            text-decoration:none;
+            border-radius:6px;
+            transition:.2s;
+        }
+
+        .btn-back:hover{
+            background:rgba(255,255,255,.2);
+        }
+
+        .content{
+            max-width:900px;
+            margin:auto;
+            padding:40px 20px;
+        }
+
+        .page-title{
+            font-family:'Syne',sans-serif;
+            font-size:30px;
+            color:#172B4D;
+            margin-bottom:10px;
+        }
+
+        .page-sub{
+            color:#7A869A;
+            margin-bottom:30px;
+        }
+
+        .card{
+            background:white;
+            border-left:5px solid #00875A;
+            border-radius:12px;
+            padding:25px;
+            margin-bottom:20px;
+            box-shadow:0 2px 6px rgba(0,0,0,.08);
+        }
+
+        .card h3{
+            font-family:'Syne',sans-serif;
+            color:#172B4D;
+            margin-bottom:10px;
+        }
+
+        .card p{
+            line-height:1.7;
+            color:#42526E;
+        }
+
+        .cta{
+            margin-top:40px;
+            background:#172B4D;
+            border-radius:12px;
+            text-align:center;
+            padding:30px;
+        }
+
+        .cta h3{
+            color:white;
+            font-family:'Syne',sans-serif;
+            margin-bottom:10px;
+        }
+
+        .cta p{
+            color:rgba(255,255,255,.7);
+            margin-bottom:20px;
+        }
+
+        .btn-login{
+            display:inline-block;
+            padding:12px 28px;
+            background:#00875A;
+            color:white;
+            text-decoration:none;
+            border-radius:8px;
+            font-family:'Syne',sans-serif;
+            font-weight:700;
+        }
+
+        .btn-login:hover{
+            background:#006644;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="header">
+    <div class="header-logo">💉 VacunaChile</div>
+
+    <a href="{% url 'login' %}" class="btn-back">
+        ← Volver al inicio
+    </a>
+</div>
+
+<div class="content">
+
+    <h1 class="page-title">📖 Instrucciones de Uso</h1>
+
+    <p class="page-sub">
+        Guía rápida para utilizar correctamente la plataforma VacunaChile.
+    </p>
+
+    <div class="card">
+        <h3>👤 Pacientes</h3>
+
+        <p>
+            • En Regístrate encontrarás indicaciones para registrarte oficialmente en el sistema de Salud de Chile. Al hacerlo, te llegará un correo para informarte.<br>
+            • Para el inicio de sesión, deberás ingresar tu Nombre de Usuario con el que se te registró y la contraseña correspondiente, ⚠️NO DES NUNCA TU CONTRASEÑA A EXTRAÑOS⚠️.<br>
+            • Al ingresar a la página luego de iniciar sesión, podrás ver tu información personal.<br>
+            • Si quieres agendar una hora para vacunación, ingresa en ➕ agendar cita, donde tendrás que llenar los campos solicitados. 
+            Al hacerlo correctamente, te llegará un correo notificándote hora y lugar.<br>
+            • Revisa las campañas activas antes de solicitar una vacuna, esto por si eres parte de un grupo de riesgo asociado a esa enfermedad.
+        </p>
+    </div>
+
+    <div class="card">
+        <h3>🩺 Personal de Salud</h3>
+
+        <p>
+            • Para registrar un paciente, entra en la sección Registrar Paciente, en la cual al rellenar los campos seleccionados, 
+            ingresara en el sistema de salud. Es importante que rellene todos los campos.<br>
+            • Para visualizar los pacientes registrados, puedes entrar en la pestaña Pacientes, en la cual podrás ver su historial de vacunación,
+            el cual incluye citas agendadas, vacunaciones asistidas y datos personales.<br> 
+            • Puedes registrar el haberlo vacunado en registrar
+            vacunación, donde deberás ingresar sus datos, el horario y el establecimiento de la vacunación.<br>
+        </p>
+    </div>
+
+    <div class="card">
+        <h3>🏛️ Ministerio de Salud</h3>
+
+        <p>
+            • Crear campañas de vacunación en el ítem Nueva Campaña, donde colocarás datos como el nombre, duración, grupos de riesgo,
+            etc.<br>
+            • En el panel principal llevarás un monitoreo de vacunas realizadas, personas registradas y campañas activas,
+            además de ver los grupos de riesgo asociadas a cada una.<br>
+            • En la sección de reportes, verás los registros de vacunación hechos por el personal de salud, supervisa que se estén guardando
+            los registros y ante cualquier anomalía contacta a tus supervisores.<br>
+            • Puedes eliminar campañas apretando el ícono rojo de basura.<br>
+        </p>
+    </div>
+
+    <div class="cta">
+        <h3>¿Listo para comenzar?</h3>
+
+        <p>
+            Regresa al inicio de sesión para acceder al sistema.
+        </p>
+
+        <a href="{% url 'login' %}" class="btn-login">
+            Ingresar al Sistema →
+        </a>
+    </div>
+
+</div>
+
+</body>
+</html>
