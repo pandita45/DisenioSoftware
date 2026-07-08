@@ -7,6 +7,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.core.mail import send_mail
 from django.utils import timezone
 from django.http import JsonResponse
 from django.db.models import Q
@@ -23,32 +24,45 @@ from functools import wraps
 
 
 def enviar_correo_resend(asunto, mensaje_html, para):
-    api_key = getattr(settings, 'RESEND_API_KEY', '')
-    from_email = getattr(settings, 'RESEND_FROM_EMAIL', 'onboarding@resend.dev')
-    if not api_key:
-        return False
+    api_key = getattr(settings, 'RESEND_API_KEY', '') or ''
+    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or getattr(settings, 'RESEND_FROM_EMAIL', None) or 'webmaster@localhost'
 
-    data = json.dumps({
-        'from': from_email,
-        'to': [para],
-        'subject': asunto,
-        'html': mensaje_html,
-    }).encode('utf-8')
+    if api_key:
+        data = json.dumps({
+            'from': from_email,
+            'to': [para],
+            'subject': asunto,
+            'html': mensaje_html,
+        }).encode('utf-8')
 
-    req = urllib.request.Request(
-        'https://api.resend.com/emails',
-        data=data,
-        headers={
-            'Authorization': f'Bearer {api_key}',
-            'Content-Type': 'application/json',
-        },
-        method='POST',
-    )
+        req = urllib.request.Request(
+            'https://api.resend.com/emails',
+            data=data,
+            headers={
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json',
+            },
+            method='POST',
+        )
+
+        try:
+            with urllib.request.urlopen(req, timeout=10) as response:
+                if response.status < 400:
+                    return True
+        except (urllib.error.URLError, urllib.error.HTTPError):
+            pass
 
     try:
-        with urllib.request.urlopen(req, timeout=10) as response:
-            return response.status < 400
-    except (urllib.error.URLError, urllib.error.HTTPError):
+        send_mail(
+            asunto,
+            mensaje_html,
+            from_email,
+            [para],
+            html_message=mensaje_html,
+            fail_silently=False,
+        )
+        return True
+    except Exception:
         return False
 
 
@@ -56,8 +70,9 @@ def enviar_recordatorios_citas(fecha=None):
     fecha = fecha or timezone.now().date()
     citas = Cita.objects.filter(
         estado='agendada',
+        cancelada=False,
         recordatorio_enviado=False,
-        fecha__in=[fecha + timedelta(days=1), fecha]
+        fecha=fecha + timedelta(days=1),
     )
     enviados = 0
     for cita in citas:
@@ -223,13 +238,17 @@ def registrar_vacunacion(request):
     form = VacunacionForm(request.POST or None)
     personal = get_object_or_404(PersonalSalud, usuario=request.user)
     if request.method == 'GET' and 'paciente' not in request.GET and 'cita' not in request.GET:
-        form.fields['cita'].queryset = Cita.objects.filter(estado='agendada')
+        form.fields['cita'].queryset = Cita.objects.filter(estado='agendada', cancelada=False)
     if request.method == 'POST' and form.is_valid():
         vacunacion = form.save(commit=False)
         vacunacion.personal_salud = personal
         vacunacion.save()
+
         if vacunacion.cita:
-            vacunacion.cita.completarCita()
+            vacunacion.cita.estado = 'completada'
+            vacunacion.cita.cancelada = False
+            vacunacion.cita.save(update_fields=['estado', 'cancelada'])
+
             correo = vacunacion.cita.correo or vacunacion.paciente.usuario.email or ''
             if correo:
                 enviar_correo_resend(
@@ -259,13 +278,27 @@ def registrar_vacunacion(request):
                 form.fields['paciente'].initial = cita.paciente_id
             if cita.vacuna_id:
                 form.fields['vacuna'].initial = cita.vacuna_id
-            form.fields['cita'].queryset = Cita.objects.filter(pk=cita_id, estado='agendada')
+            form.fields['cita'].queryset = Cita.objects.filter(pk=cita_id, estado='agendada', cancelada=False)
         else:
-            form.fields['cita'].queryset = Cita.objects.filter(estado='agendada')
+            form.fields['cita'].queryset = Cita.objects.filter(estado='agendada', cancelada=False)
 
         if paciente_id:
             form.fields['cita'].queryset = form.fields['cita'].queryset.filter(paciente_id=paciente_id)
     return render(request, 'vacunacion/registrar_vacunacion.html', {'form': form})
+
+
+@login_required
+@rol_requerido('personal_salud')
+def actualizar_estado_citas_vencidas(request):
+    hoy = timezone.now().date()
+    citas = Cita.objects.filter(estado='agendada', cancelada=False, fecha__lt=hoy)
+    actualizadas = 0
+    for cita in citas:
+        cita.estado = 'ausente'
+        cita.save(update_fields=['estado'])
+        actualizadas += 1
+    messages.success(request, f"Se actualizaron {actualizadas} citas vencidas a estado Ausente.")
+    return redirect('lista_pacientes')
 
 
 @login_required

@@ -4,6 +4,23 @@ from django.utils import timezone
 from .models import Cita, Vacunacion, Campana, Paciente, Usuario, Vacuna
 
 
+class SelectWithData(forms.Select):
+    def __init__(self, attrs=None, choices=()):
+        super().__init__(attrs, choices)
+
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(name, value, label, selected, index, subindex=subindex, attrs=attrs)
+        if value:
+            try:
+                cita_id = int(value)
+            except (TypeError, ValueError):
+                return option
+            cita = Cita.objects.filter(pk=cita_id).select_related('paciente', 'vacuna').first()
+            if cita:
+                option['label'] = f"{cita.fecha} {cita.hora} - {cita.paciente.nombre} ({cita.vacuna.nombre})"
+        return option
+
+
 class LoginForm(forms.Form):
     username = forms.CharField(label="Usuario", widget=forms.TextInput(attrs={'placeholder': 'Usuario o RUT'}))
     password = forms.CharField(label="Contrasena", widget=forms.PasswordInput(attrs={'placeholder': 'Contrasena'}))
@@ -86,7 +103,7 @@ class VacunacionForm(forms.ModelForm):
 
         self.fields['vacuna'].queryset = vacunas_disponibles.distinct()
 
-        citas_disponibles = Cita.objects.filter(estado='agendada')
+        citas_disponibles = Cita.objects.filter(estado='agendada', cancelada=False).select_related('paciente', 'vacuna')
         cita_inicial = self.initial.get('cita')
         if cita_inicial is None and getattr(self.instance, 'pk', None):
             cita_inicial = self.instance.cita
@@ -94,6 +111,23 @@ class VacunacionForm(forms.ModelForm):
             cita_pk = cita_inicial.pk if hasattr(cita_inicial, 'pk') else cita_inicial
             citas_disponibles = citas_disponibles | Cita.objects.filter(pk=cita_pk)
         self.fields['cita'].queryset = citas_disponibles.order_by('fecha', 'hora', 'idCita')
+        self.fields['cita'].widget = SelectWithData(attrs={'class': 'form-control'})
+        self.fields['cita'].empty_label = 'Seleccione una cita agendada'
+
+        if self.data.get('cita'):
+            cita = Cita.objects.filter(pk=self.data.get('cita')).select_related('paciente', 'vacuna').first()
+            if cita:
+                self.fields['paciente'].initial = cita.paciente_id
+                self.fields['vacuna'].initial = cita.vacuna_id
+                self.fields['fecha'].initial = cita.fecha
+                self.fields['hora'].initial = cita.hora
+        elif getattr(self.instance, 'cita', None) and self.instance.cita_id:
+            cita = self.instance.cita
+            if cita:
+                self.fields['paciente'].initial = cita.paciente_id
+                self.fields['vacuna'].initial = cita.vacuna_id
+                self.fields['fecha'].initial = cita.fecha
+                self.fields['hora'].initial = cita.hora
 
     class Meta:
         model = Vacunacion

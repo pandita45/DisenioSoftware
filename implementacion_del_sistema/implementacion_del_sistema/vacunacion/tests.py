@@ -1,7 +1,7 @@
 from datetime import date, time, timedelta
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from .forms import RegistroCitaForm, VacunacionForm
@@ -213,6 +213,25 @@ class CrearCampanaViewTests(TestCase):
         self.assertEqual(list(form.fields.keys())[:2], ['cita', 'paciente'])
         self.assertEqual(list(form.fields['cita'].queryset), [cita_agendada])
 
+    @override_settings(RESEND_API_KEY='', DEFAULT_FROM_EMAIL='test@example.com')
+    @patch('vacunacion.views.send_mail')
+    def test_enviar_correo_resend_fallback_al_smtp(self, send_mail):
+        from .views import enviar_correo_resend
+
+        send_mail.return_value = 1
+
+        resultado = enviar_correo_resend('Asunto', '<p>Hola</p>', 'paciente@example.com')
+
+        self.assertTrue(resultado)
+        send_mail.assert_called_once_with(
+            'Asunto',
+            '<p>Hola</p>',
+            'test@example.com',
+            ['paciente@example.com'],
+            html_message='<p>Hola</p>',
+            fail_silently=False,
+        )
+
     @patch('vacunacion.views.enviar_correo_resend')
     def test_agendar_cita_envia_correo_de_confirmacion(self, enviar_correo):
         paciente = Paciente.objects.create(
@@ -278,6 +297,48 @@ class CrearCampanaViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         enviar_correo.assert_called_once()
 
+    @patch('vacunacion.views.enviar_correo_resend')
+    def test_registrar_vacunacion_actualiza_estado_de_la_cita(self, enviar_correo):
+        paciente = Paciente.objects.create(
+            usuario=Usuario.objects.create_user(username='paciente_estado_vacunacion', password='12345678', rol='paciente', rut='16161616-1', email='paciente3@example.com'),
+            rut='16161616-1',
+            nombre='Paciente Estado Vacunacion',
+            fechaNacimiento=date(1990, 1, 1),
+        )
+        punto = PuntoVacunacion.objects.create(nombre='Centro', direccion='Dirección 4')
+        vacuna = Vacuna.objects.create(nombre='Neumococo')
+        cita = Cita.objects.create(
+            paciente=paciente,
+            punto_vacunacion=punto,
+            vacuna=vacuna,
+            fecha=date.today(),
+            hora=time(10, 0),
+            correo='paciente3@example.com',
+            estado='agendada',
+        )
+        personal = PersonalSalud.objects.create(
+            usuario=Usuario.objects.create_user(username='salud_estado', password='12345678', rol='personal_salud', rut='17171717-1'),
+            rut='17171717-1',
+            nombre='Personal Salud Estado',
+            rol='Enfermero',
+        )
+        Stock.objects.create(vacuna=vacuna, punto_vacunacion=punto, cantidad=5)
+
+        self.client.force_login(personal.usuario)
+        response = self.client.post(reverse('registrar_vacunacion'), {
+            'cita': cita.idCita,
+            'paciente': paciente.pk,
+            'vacuna': vacuna.idTipo,
+            'fecha': date.today().isoformat(),
+            'hora': '10:30',
+        })
+
+        self.assertEqual(response.status_code, 302)
+        cita.refresh_from_db()
+        self.assertEqual(cita.estado, 'completada')
+        self.assertFalse(cita.cancelada)
+        enviar_correo.assert_called_once()
+
     def test_enviar_recordatorios_citas(self):
         paciente = Paciente.objects.create(
             usuario=Usuario.objects.create_user(username='paciente_recordatorio', password='12345678', rol='paciente', rut='15151515-1', email='recordatorio@example.com'),
@@ -298,10 +359,47 @@ class CrearCampanaViewTests(TestCase):
         )
 
         with patch('vacunacion.views.enviar_correo_resend', return_value=True) as enviar_correo:
-            enviar_recordatorios_citas()
+            enviar_recordatorios_citas(fecha=date.today())
 
         cita.refresh_from_db()
         self.assertTrue(cita.recordatorio_enviado)
+        enviar_correo.assert_called_once()
+
+    def test_enviar_recordatorios_citas_solo_para_maniana(self):
+        paciente = Paciente.objects.create(
+            usuario=Usuario.objects.create_user(username='paciente_recordatorio_maniana', password='12345678', rol='paciente', rut='18181818-1', email='recordatorio2@example.com'),
+            rut='18181818-1',
+            nombre='Paciente Recordatorio Mañana',
+            fechaNacimiento=date(1990, 1, 1),
+        )
+        punto = PuntoVacunacion.objects.create(nombre='Centro', direccion='Dirección 5')
+        vacuna = Vacuna.objects.create(nombre='Hib')
+        cita_hoy = Cita.objects.create(
+            paciente=paciente,
+            punto_vacunacion=punto,
+            vacuna=vacuna,
+            fecha=date.today(),
+            hora=time(9, 0),
+            correo='recordatorio2@example.com',
+            estado='agendada',
+        )
+        cita_manana = Cita.objects.create(
+            paciente=paciente,
+            punto_vacunacion=punto,
+            vacuna=vacuna,
+            fecha=date.today() + timedelta(days=1),
+            hora=time(9, 0),
+            correo='recordatorio2@example.com',
+            estado='agendada',
+        )
+
+        with patch('vacunacion.views.enviar_correo_resend', return_value=True) as enviar_correo:
+            enviar_recordatorios_citas(fecha=date.today())
+
+        cita_hoy.refresh_from_db()
+        cita_manana.refresh_from_db()
+        self.assertFalse(cita_hoy.recordatorio_enviado)
+        self.assertTrue(cita_manana.recordatorio_enviado)
         enviar_correo.assert_called_once()
 
     def test_dashboard_paciente_solo_muestra_citas_agendadas(self):

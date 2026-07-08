@@ -17,6 +17,7 @@ urlpatterns = [
     path('vacunacion/registrar/', views.registrar_vacunacion, name='registrar_vacunacion'),
     path('pacientes/', views.lista_pacientes, name='lista_pacientes'),
     path('pacientes/registrar/', views.registrar_paciente, name='registrar_paciente'),
+    path('citas/actualizar-vencidas/', views.actualizar_estado_citas_vencidas, name='actualizar_estado_citas_vencidas'),
     path('pacientes/<int:paciente_id>/historial/', views.historial_paciente, name='historial_paciente'),
 
     # MINSAL
